@@ -1,35 +1,57 @@
 import streamlit as st
 import pandas as pd
-import requests
+import os
 
-st.title("Bienvenue Katarina! 👋")
+# Obtenir le chemin du dossier actuel
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Charger les données
+taxis = pd.read_csv('taxis.csv')
+
+st.title("🚕 Bienvenue Katarina! 👋")
 st.write("Ceci est ma première app Streamlit!")
 
-taxis = pd.read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/taxis.csv')
+# Images associées
+images = {
+    'Times Sq/Theatre District': os.path.join(BASE_DIR, 'img/time square.jpg'),
+    'SoHo': os.path.join(BASE_DIR, 'img/soho.jpg'),
+    'West Village': os.path.join(BASE_DIR, 'img/west village.jpg'),
+    'Williamsburg (North Side)': os.path.join(BASE_DIR, 'img/williamsburg-bridge-147104085-58f7ee2f3df78ca1598bd7c9.jpg'),
+    'Park Slope': os.path.join(BASE_DIR, 'img/park slop.jpg')
+}
 
-# Récupérer les quartiers (SANS NaN)
-quartiers = sorted([q for q in taxis['pickup_zone'].unique() if pd.notna(q)])
+# Les 5 quartiers
+quartiers = list(images.keys())
 
 quartier = st.selectbox("Choisissez un quartier :", quartiers)
-
-st.write(f"Vous avez choisi {quartier}")
-
-# Fonction pour récupérer une image Pexels
-def get_pexels_image(query):
-    search_query = f"{query} Manhattan street photography"
-    url = f"https://api.pexels.com/v1/search?query={search_query}&per_page=1"  # ← Utilise search_query !
-    headers = {"Authorization": "YcknU8b3WUjFgN40MIvgyUknjub7p4foRFyk4QSMeHUgR3jx3ZLgbyNu"}
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        data = response.json()
-        if data['photos']:
-            return data['photos'][0]['src']['medium']
-    return None
+st.write(f"Vous avez choisi **{quartier}**")
 
 # Afficher l'image
-image = get_pexels_image(quartier)
-if image:
-    st.image(image)
+st.image(images[quartier])
 
+# Tableau données
 st.subheader("Données des taxis")
 st.write(taxis[taxis['pickup_zone'] == quartier].head(10))
+
+# DASHBOARD INTERACTIF
+st.title("📊 Dashboard Interactif")
+
+colonnes = taxis.select_dtypes(include='number').columns.tolist()
+col_x = st.selectbox("Choisissez la colonne X :", colonnes)
+col_y = st.selectbox("Choisissez la colonne Y :", colonnes)
+
+graphique = st.selectbox("Choisissez un graphique :", ['scatter_chart', 'bar_chart', 'line_chart'])
+
+# Limiter à 500 lignes
+df_graph = taxis[[col_x, col_y]].dropna().head(500)
+
+if graphique == 'scatter_chart':
+    st.scatter_chart(df_graph)
+elif graphique == 'bar_chart':
+    st.bar_chart(df_graph)
+elif graphique == 'line_chart':
+    st.line_chart(df_graph)
+
+# Matrice de corrélation
+if st.checkbox("Afficher la matrice de corrélation"):
+    df_numerique = taxis.select_dtypes(include='number')
